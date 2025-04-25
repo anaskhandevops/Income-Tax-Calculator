@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modern Income Tax Calculator v4 (2025 Rates)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Custom styles */
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(to bottom right, #f0f9ff, #f5f3ff); /* sky-50 to violet-50 */
+        }
+
+        /* Style standard inputs and selects */
+        input[type="number"], select {
+            width: 100%;
+            padding: 0.75rem 1rem; /* py-3 px-4 equivalent */
+            background-color: #f8fafc; /* slate-50 */
+            border: 1px solid #cbd5e1; /* slate-300 */
+            border-radius: 0.5rem; /* rounded-lg */
+            color: #334155; /* slate-700 */
+            transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+            box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); /* shadow-sm */
+            -webkit-appearance: none; /* Base appearance removal */
+            -moz-appearance: none;
+            appearance: none;
+        }
+         input[type="number"]::placeholder {
+             color: #94a3b8; /* slate-400 placeholder */
+         }
+
+         /* Add custom arrow for selects */
+         select {
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23475569' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e"); /* slate-600 arrow */
+            background-position: right 0.75rem center;
+            background-repeat: no-repeat;
+            background-size: 1.25em 1.25em;
+            padding-right: 2.75rem; /* Ensure text doesn't overlap arrow */
+         }
+         /* Ensure select text color is applied */
+         select { color: #334155; }
+
+
+        /* Focus state */
+        input[type="number"]:focus, select:focus {
+             border-color: #6366f1; /* indigo-500 */
+             box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2); /* Lighter indigo focus ring */
+             outline: none;
+             background-color: #ffffff;
+         }
+         /* Error state */
+         input.border-red-500 { border-color: #ef4444 !important; }
+         input.border-red-500:focus { border-color: #ef4444 !important; box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2) !important; }
+
+        /* Result and Sub-region Div Transitions */
+        #result, .sub-region-div {
+            transition: opacity 0.4s ease-in-out, max-height 0.5s ease-out, transform 0.3s ease-out, margin-top 0.4s ease-out, padding-top 0.4s ease-out, padding-bottom 0.4s ease-out, visibility 0.5s linear;
+            transform: translateY(5px); max-height: 0; overflow: hidden; opacity: 0;
+            margin-top: 0 !important; padding-top: 0 !important; padding-bottom: 0 !important; border-width: 0 !important;
+            visibility: hidden; /* Start hidden */
+        }
+        #result.visible, .sub-region-div.visible-smooth {
+             opacity: 1; transform: translateY(0); max-height: 500px; margin-top: 1.5rem !important;
+             padding-top: 1rem !important; padding-bottom: 1rem !important; border-width: 1px !important;
+             visibility: visible; /* Make visible */
+        }
+         #result.visible { padding: 1.5rem; border-color: #e5e7eb; background-color: #ffffff; border-radius: 0.75rem; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); }
+         .sub-region-div.visible-smooth { padding-top: 0 !important; padding-bottom: 0 !important; border-width: 0 !important; }
+        .error-message { color: #ef4444; font-size: 0.875rem; margin-top: 0.25rem; }
+         label { cursor: pointer; color: #334155; font-weight: 500; }
+         .result-label { font-weight: 500; color: #64748b; display: inline-block; min-width: 150px; margin-right: 0.5rem; }
+
+         /* Button styles */
+         #calculateButton { background: linear-gradient(to right, #4f46e5, #7c3aed); transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); border: none; }
+         #calculateButton:hover { background: linear-gradient(to right, #4338ca, #6d28d9); box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15); transform: translateY(-1px); }
+         #calculateButton:active { transform: translateY(0px); box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); }
+         #calculateButton:disabled { cursor: not-allowed; background: #94a3b8; box-shadow: none; transform: none; }
+
+         /* Ensure hidden-smooth truly hides */
+         .hidden-smooth {
+             opacity: 0 !important; max-height: 0 !important; padding-top: 0 !important;
+             padding-bottom: 0 !important; margin-top: 0 !important; margin-bottom: 0 !important;
+             overflow: hidden !important; border-width: 0 !important; visibility: hidden !important;
+         }
+
+    </style>
+</head>
+<body class="bg-slate-100 flex items-center justify-center min-h-screen p-4 sm:p-6">
+
+    <div class="bg-white p-8 md:p-12 rounded-2xl shadow-2xl w-full max-w-xl">
+        <h1 class="text-3xl sm:text-4xl font-bold mb-10 text-center text-slate-800">Income Tax Calculator</h1>
+        <form id="taxForm" class="space-y-6">
+
+            <div>
+                <label for="country" class="block text-sm font-medium text-slate-600 mb-1.5">Country</label>
+                <select id="country" name="country">
+                    <option value="PK" selected>Pakistan (Salaried)</option>
+                    <option value="US">United States</option>
+                    <option value="GB">United Kingdom</option>
+                    <option value="CA">Canada</option>
+                    <option value="IN">India (New Regime)</option>
+                    <option value="FR">France (National - Simplified)</option>
+                    <option value="RU">Russia (National)</option>
+                </select>
+            </div>
+
+             <div id="usStateDiv" class="hidden-smooth sub-region-div space-y-1">
+                 <label for="usState" class="block text-sm font-medium text-slate-600 mb-1.5">State (US)</label>
+                 <select id="usState" name="usState">
+                     <option value="CA" selected>California</option>
+                     <option value="TX">Texas</option>
+                     <option value="NY">New York</option>
+                     <option value="FL">Florida</option>
+                     <option value="IL">Illinois</option>
+                     <option value="PA">Pennsylvania</option>
+                     <option value="OH">Ohio</option>
+                     <option value="GA">Georgia</option>
+                     <option value="NC">North Carolina</option>
+                     <option value="MI">Michigan</option>
+                     <option value="NJ">New Jersey</option>
+                     <option value="VA">Virginia</option>
+                 </select>
+             </div>
+
+             <div id="caProvinceDiv" class="hidden-smooth sub-region-div space-y-1">
+                 <label for="caProvince" class="block text-sm font-medium text-slate-600 mb-1.5">Province (Canada)</label>
+                  <select id="caProvince" name="caProvince">
+                     <option value="ON" selected>Ontario</option>
+                     <option value="AB">Alberta</option>
+                     <option value="BC">British Columbia</option>
+                     <option value="QC">Quebec</option>
+                     <option value="MB">Manitoba</option>
+                     <option value="SK">Saskatchewan</option>
+                     <option value="NS">Nova Scotia</option>
+                     <option value="NB">New Brunswick</option>
+                 </select>
+             </div>
+
+             <div id="ukRegionDiv" class="hidden-smooth sub-region-div space-y-1">
+                 <label for="ukRegion" class="block text-sm font-medium text-slate-600 mb-1.5">Region (UK)</label>
+                  <select id="ukRegion" name="ukRegion">
+                     <option value="EN_NI" selected>England/Northern Ireland</option>
+                     <option value="SCT">Scotland</option>
+                     <option value="WLS">Wales</option>
+                 </select>
+             </div>
+
+            <div>
+                <label for="income" class="block text-sm font-medium text-slate-600 mb-1.5">Total Annual Income (<span id="incomeCurrency">PKR</span>)</label>
+                 <input type="number" id="income" name="income" placeholder="e.g., 50000" required step="any">
+                <p id="incomeError" class="error-message hidden"></p>
+            </div>
+
+            <div>
+                <label for="deductions" class="block text-sm font-medium text-slate-600 mb-1.5">Total Deductions/Allowances (<span id="deductionsCurrency">PKR</span>)</label>
+                 <input type="number" id="deductions" name="deductions" placeholder="e.g., 5000" value="0" required step="any">
+                 <p id="deductionsError" class="error-message hidden"></p>
+                 <p id="ukAllowanceNote" class="text-xs text-slate-500 mt-1.5 hidden">Note: For UK, this is in addition to the standard Personal Allowance (£12,570 for 2025/26).</p>
+                 <p id="caAllowanceNote" class="text-xs text-slate-500 mt-1.5 hidden">Note: For Canada, this is before the Basic Personal Amount (BPA) tax credit is applied. Quebec calculation is highly simplified.</p>
+                 <p id="frAllowanceNote" class="text-xs text-slate-500 mt-1.5 hidden">Note: For France, calculation assumes a single filer (1 part) and applies a standard 10% deduction for professional expenses (capped) before tax brackets (using 2024 income rates).</p>
+                 <p id="usStateNote" class="text-xs text-slate-500 mt-1.5 hidden">Note: US State tax calculated on the same income base as Federal for simplicity; actual state deductions/exemptions may differ significantly.</p>
+                 <p id="inNote" class="text-xs text-slate-500 mt-1.5 hidden">Note: India calculation uses New Regime (AY 2025-26), excludes cess/surcharge. Standard Deduction (₹50k) not auto-applied; include in deductions if eligible. Tax rebate u/s 87A not shown.</p>
+            </div>
+
+            <button type="submit" id="calculateButton"
+                    class="w-full text-white py-3 px-4 rounded-lg font-semibold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500">
+                Calculate Tax
+            </button>
+        </form>
+
+        <div id="result" class="mt-8 opacity-0">
+             <h2 class="text-xl font-semibold text-gray-800 mb-4">Calculation Result:</h2>
+             <p class="text-gray-700 mb-2 flex justify-between items-center"><span class="result-label" id="incomeAfterDeductionsLabel">Taxable Income:</span> <span id="incomeAfterDeductions" class="font-medium text-gray-900 text-right">PKR 0.00</span></p>
+             <p id="ukTaxableIncomeRow" class="text-gray-700 hidden-smooth mb-2 flex justify-between items-center"><span class="result-label">UK Taxable (after PA):</span> <span id="taxableIncomeUK" class="font-medium text-gray-900 text-right">GBP 0.00</span></p>
+             <p id="frTaxableIncomeRow" class="text-gray-700 hidden-smooth mb-2 flex justify-between items-center"><span class="result-label">FR Taxable (after 10%):</span> <span id="taxableIncomeFR" class="font-medium text-gray-900 text-right">EUR 0.00</span></p>
+             <p id="federalTaxRow" class="text-gray-700 hidden-smooth mb-2 flex justify-between items-center"><span class="result-label">Federal/National Tax:</span> <span id="federalTaxAmount" class="font-medium text-gray-900 text-right">USD 0.00</span></p>
+             <p id="regionalTaxRow" class="text-gray-700 hidden-smooth mb-2 flex justify-between items-center"><span class="result-label" id="regionalTaxLabel">State/Provincial/Regional Tax:</span> <span id="regionalTaxAmount" class="font-medium text-gray-900 text-right">USD 0.00</span></p>
+             <p class="text-gray-800 mt-4 pt-4 border-t border-gray-300 flex justify-between items-center"><span class="result-label font-bold text-lg">Total Estimated Tax:</span> <span id="taxAmount" class="font-bold text-emerald-600 text-xl text-right">PKR 0.00</span></p>
+        </div>
+
+        <p id="disclaimer" class="mt-6 text-xs text-gray-500 text-center">
+            Disclaimer: Calculations based on simplified rules for illustrative purposes. Consult a tax professional.
+        </p>
+    </div>
+
+    <script>
+        // --- DOM Elements ---
+        const taxForm = document.getElementById('taxForm');
+        const countrySelect = document.getElementById('country');
+        const usStateDiv = document.getElementById('usStateDiv');
+        const usStateSelect = document.getElementById('usState');
+        const caProvinceDiv = document.getElementById('caProvinceDiv');
+        const caProvinceSelect = document.getElementById('caProvince');
+        const ukRegionDiv = document.getElementById('ukRegionDiv');
+        const ukRegionSelect = document.getElementById('ukRegion');
+        const incomeInput = document.getElementById('income');
+        const deductionsInput = document.getElementById('deductions');
+        const incomeCurrencySpan = document.getElementById('incomeCurrency');
+        const deductionsCurrencySpan = document.getElementById('deductionsCurrency');
+        const resultDiv = document.getElementById('result');
+        const incomeAfterDeductionsSpan = document.getElementById('incomeAfterDeductions');
+        const incomeAfterDeductionsLabel = document.getElementById('incomeAfterDeductionsLabel');
+        const taxAmountSpan = document.getElementById('taxAmount');
+        const calculateButton = document.getElementById('calculateButton');
+        const incomeError = document.getElementById('incomeError');
+        const deductionsError = document.getElementById('deductionsError');
+        const disclaimerP = document.getElementById('disclaimer');
+        const ukAllowanceNote = document.getElementById('ukAllowanceNote');
+        const caAllowanceNote = document.getElementById('caAllowanceNote');
+        const frAllowanceNote = document.getElementById('frAllowanceNote');
+        const usStateNote = document.getElementById('usStateNote');
+        const inNote = document.getElementById('inNote'); // Added India note
+        const ukTaxableIncomeRow = document.getElementById('ukTaxableIncomeRow');
+        const taxableIncomeUKSpan = document.getElementById('taxableIncomeUK');
+        const frTaxableIncomeRow = document.getElementById('frTaxableIncomeRow');
+        const taxableIncomeFRSpan = document.getElementById('taxableIncomeFR');
+        const federalTaxRow = document.getElementById('federalTaxRow');
+        const federalTaxAmountSpan = document.getElementById('federalTaxAmount');
+        const regionalTaxRow = document.getElementById('regionalTaxRow');
+        const regionalTaxLabel = document.getElementById('regionalTaxLabel');
+        const regionalTaxAmountSpan = document.getElementById('regionalTaxAmount');
+
+        // --- Helper: Marginal Tax Calculation Function ---
+        function calculateMarginalTax(taxableIncome, brackets) {
+             let tax = 0; let previousLimit = 0;
+             for (const bracket of brackets) {
+                 const currentLimit = (bracket.limit === Infinity) ? Infinity : Number(bracket.limit);
+                 if (isNaN(currentLimit)) { console.error("Invalid bracket limit:", bracket.limit); continue; }
+                 if (taxableIncome > previousLimit) {
+                     const incomeInBracket = Math.min(taxableIncome, currentLimit) - previousLimit;
+                     tax += incomeInBracket * Number(bracket.rate);
+                 } else { break; }
+                 if (currentLimit === Infinity) break;
+                 previousLimit = currentLimit;
+             }
+             return tax > 0 ? tax : 0;
+        }
+
+        // --- Tax Data Configuration (India Added) ---
+        const taxData = {
+            'PK': { currency: 'PKR', locale: 'en-PK', disclaimer: 'Uses simplified Pakistan tax slabs for salaried individuals (FY 2024-2025) as 2025-26 rates not finalized. Does not include specific allowances/credits.', calculate: function(t){let x=0;if(t<=6e5)x=0;else if(t<=12e5)x=(t-6e5)*0.05;else if(t<=22e5)x=3e4+(t-12e5)*0.15;else if(t<=32e5)x=18e4+(t-22e5)*0.25;else if(t<=41e5)x=43e4+(t-32e5)*0.30;else x=7e5+(t-41e5)*0.35;return{nationalTax:x>0?x:0};} },
+            'US': { currency: 'USD', locale: 'en-US', disclaimer: 'Uses simplified US Federal (Single Filer, 2025) and selected State rates (2025). State calculation uses federal income base for simplicity. Does not include standard/itemized deductions, credits, AMT, etc.', calculateNational: function(t){const b=[{limit:11925,rate:0.10},{limit:48475,rate:0.12},{limit:103350,rate:0.22},{limit:197300,rate:0.24},{limit:250525,rate:0.32},{limit:626350,rate:0.35},{limit:Infinity,rate:0.37}];return calculateMarginalTax(t,b);}, states: {'CA':{calculate:function(t){const b=[{limit:10756,rate:0.01},{limit:25499,rate:0.02},{limit:40245,rate:0.04},{limit:55866,rate:0.06},{limit:70606,rate:0.08},{limit:360659,rate:0.093},{limit:432787,rate:0.103},{limit:721314,rate:0.113},{limit:1e6,rate:0.123},{limit:Infinity,rate:0.133}];return calculateMarginalTax(t,b);}},'TX':{calculate:function(t){return 0;}},'NY':{calculate:function(t){const b=[{limit:8500,rate:0.04},{limit:11700,rate:0.045},{limit:13900,rate:0.0525},{limit:80650,rate:0.055},{limit:215400,rate:0.06},{limit:1077550,rate:0.0685},{limit:5e6,rate:0.0965},{limit:25e6,rate:0.103},{limit:Infinity,rate:0.109}];return calculateMarginalTax(t,b);}},'FL':{calculate:function(t){return 0;}},'IL':{calculate:function(t){return t*0.0495;}},'PA':{calculate:function(t){return t*0.0307;}},'OH':{calculate:function(t){if(t<=26050)return 0;if(t<=1e5)return 0.0275*(t-26050);return 2033.63+0.035*(t-1e5);}},'GA':{calculate:function(t){return t*0.0529;}},'NC':{calculate:function(t){return t*0.0425;}},'MI':{calculate:function(t){return t*0.0425;}},'NJ':{calculate:function(t){const b=[{limit:2e4,rate:0.014},{limit:35e3,rate:0.0175},{limit:4e4,rate:0.035},{limit:75e3,rate:0.05525},{limit:5e5,rate:0.0637},{limit:1e6,rate:0.0897},{limit:Infinity,rate:0.1075}];return calculateMarginalTax(t,b);}},'VA':{calculate:function(t){const b=[{limit:3e3,rate:0.02},{limit:5e3,rate:0.03},{limit:17e3,rate:0.05},{limit:Infinity,rate:0.0575}];return calculateMarginalTax(t,b);}}} },
+            'GB': { currency: 'GBP', locale: 'en-GB', disclaimer: 'Uses simplified UK Income Tax bands (2025/26) for selected region. Applies standard Personal Allowance (£12,570). Calculates tax on non-savings, non-dividend income only. Does not include National Insurance, PA tapering, etc.', regions: {'EN_NI':{name:'England/NI',calculate:function(i){const p=12570,a=i>125140?0:p,t=Math.max(0,i-a);let x=0;const b=37700,h=125140;if(t<=b)x=t*0.20;else if(t<=h)x=b*0.20+(t-b)*0.40;else x=b*0.20+(h-b)*0.40+(t-h)*0.45;return{regionalTax:x>0?x:0,taxableIncomeDisplay:t};}},'SCT':{name:'Scotland',calculate:function(i){const p=12570,a=i>125140?0:p,t=Math.max(0,i-a);const k=[{limit:2827,rate:0.19},{limit:14921,rate:0.20},{limit:31092,rate:0.21},{limit:62430,rate:0.42},{limit:125140,rate:0.45},{limit:Infinity,rate:0.48}];let x=calculateMarginalTax(t,k);return{regionalTax:x>0?x:0,taxableIncomeDisplay:t};}},'WLS':{name:'Wales',calculate:function(i){const p=12570,a=i>125140?0:p,t=Math.max(0,i-a);let x=0;const b=37700,h=125140;if(t<=b)x=t*0.20;else if(t<=h)x=b*0.20+(t-b)*0.40;else x=b*0.20+(h-b)*0.40+(t-h)*0.45;return{regionalTax:x>0?x:0,taxableIncomeDisplay:t};}}} },
+            'CA': { currency: 'CAD', locale: 'en-CA', disclaimer: 'Uses simplified Canadian Federal (2025) and selected Provincial rates (2025). Does not include BPA tax credit or other specifics. Quebec calculation is highly simplified.', calculateNational: function(t){const b=[{limit:57375,rate:0.15},{limit:114750,rate:0.205},{limit:177882,rate:0.26},{limit:253414,rate:0.29},{limit:Infinity,rate:0.33}];return calculateMarginalTax(t,b);}, provinces: {'ON':{name:'Ontario',calculate:function(t){const b=[{limit:52886,rate:0.0505},{limit:105775,rate:0.0915},{limit:15e4,rate:0.1116},{limit:22e4,rate:0.1216},{limit:Infinity,rate:0.1316}];return calculateMarginalTax(t,b);}},'AB':{name:'Alberta',calculate:function(t){const b=[{limit:6e4,rate:0.08},{limit:151234,rate:0.10},{limit:181481,rate:0.12},{limit:241974,rate:0.13},{limit:362961,rate:0.14},{limit:Infinity,rate:0.15}];return calculateMarginalTax(t,b);}},'BC':{name:'British Columbia',calculate:function(t){const b=[{limit:49279,rate:0.0506},{limit:98560,rate:0.077},{limit:113158,rate:0.105},{limit:137407,rate:0.1229},{limit:186306,rate:0.147},{limit:259829,rate:0.168},{limit:Infinity,rate:0.205}];return calculateMarginalTax(t,b);}},'QC':{name:'Quebec',locale:'fr-CA',calculate:function(t){const b=[{limit:53255,rate:0.14},{limit:106495,rate:0.19},{limit:129590,rate:0.24},{limit:Infinity,rate:0.2575}];return calculateMarginalTax(t,b);}},'MB':{name:'Manitoba',calculate:function(t){const b=[{limit:47e3,rate:0.108},{limit:1e5,rate:0.1275},{limit:Infinity,rate:0.174}];return calculateMarginalTax(t,b);}},'SK':{name:'Saskatchewan',calculate:function(t){const b=[{limit:53463,rate:0.105},{limit:152750,rate:0.125},{limit:Infinity,rate:0.145}];return calculateMarginalTax(t,b);}},'NS':{name:'Nova Scotia',calculate:function(t){const b=[{limit:30507,rate:0.0879},{limit:61015,rate:0.1495},{limit:95883,rate:0.1667},{limit:154650,rate:0.175},{limit:Infinity,rate:0.21}];return calculateMarginalTax(t,b);}},'NB':{name:'New Brunswick',calculate:function(t){const b=[{limit:51306,rate:0.094},{limit:102614,rate:0.14},{limit:190060,rate:0.16},{limit:Infinity,rate:0.195}];return calculateMarginalTax(t,b);}}} },
+            'IN': { currency: 'INR', locale: 'en-IN', disclaimer: 'Uses simplified India New Tax Regime slabs (AY 2025-26 / FY 2024-25). Excludes cess, surcharge, and Sec 87A rebate. Standard Deduction (₹50k) not auto-applied; include in deductions if eligible.', calculate: function(t){let x=0;if(t<=3e5)x=0;else if(t<=7e5)x=(t-3e5)*0.05;else if(t<=1e6)x=2e4+(t-7e5)*0.10;else if(t<=12e5)x=5e4+(t-1e6)*0.15;else if(t<=15e5)x=8e4+(t-12e5)*0.20;else x=14e4+(t-15e5)*0.30;return{nationalTax:x>0?x:0};} },
+            'FR': { currency: 'EUR', locale: 'fr-FR', disclaimer: 'Uses simplified French national income tax scale (2024 income declared in 2025). Assumes single filer (1 part), applies standard 10% deduction (max €14,455). Does not include family quotient, credits, social charges.', calculate: function(i){const d=Math.min(i*0.10,14455),t=Math.max(0,i-d);const b=[{limit:11497,rate:0.00},{limit:29315,rate:0.11},{limit:83823,rate:0.30},{limit:180294,rate:0.41},{limit:Infinity,rate:0.45}];let x=calculateMarginalTax(t,b);return{nationalTax:x>0?x:0,taxableIncomeDisplay:t};} },
+             'RU': { currency: 'RUB', locale: 'ru-RU', disclaimer: 'Uses simplified Russian personal income tax rates (2025). Does not include deductions, exemptions, residency nuances.', calculate: function(t){const b=[{limit:24e5,rate:0.13},{limit:5e6,rate:0.15},{limit:2e7,rate:0.18},{limit:5e7,rate:0.20},{limit:Infinity,rate:0.22}];let x=calculateMarginalTax(t,b);return{nationalTax:x>0?x:0};} }
+        };
+
+        // --- Helper Functions ---
+        function formatCurrency(amount, countryCode, provinceOrRegionCode = null) {
+            let config = taxData[countryCode];
+            let locale = config?.locale;
+            let currency = config?.currency;
+            if (countryCode === 'CA' && provinceOrRegionCode === 'QC' && config?.provinces?.QC?.locale) { locale = config.provinces.QC.locale; }
+            locale = locale || 'en-US'; currency = currency || 'USD';
+            try { return amount.toLocaleString(locale, { style: 'currency', currency: currency, minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+            catch (e) { console.error(`Error formatting currency for locale ${locale} and currency ${currency}:`, e); return `${currency} ${amount.toFixed(2)}`; }
+        }
+
+        function validateInput(inputElement, errorElement) {
+            const value = inputElement.value.trim();
+            errorElement.textContent = ''; errorElement.classList.add('hidden');
+            inputElement.classList.remove('border-red-500');
+            if (value === '') { errorElement.textContent = 'This field is required.'; errorElement.classList.remove('hidden'); inputElement.classList.add('border-red-500'); return false; }
+            const numberValue = parseFloat(value);
+            if (isNaN(numberValue) || numberValue < 0) { errorElement.textContent = 'Please enter a valid non-negative number.'; errorElement.classList.remove('hidden'); inputElement.classList.add('border-red-500'); return false; }
+            return true;
+        }
+
+        function updateUIForCountry(countryCode) {
+             const config = taxData[countryCode];
+             if (!config) return;
+             incomeCurrencySpan.textContent = config.currency; deductionsCurrencySpan.textContent = config.currency;
+             disclaimerP.textContent = `Disclaimer: ${config.disclaimer} Calculations are for illustrative purposes only. Consult a tax professional for accurate advice.`;
+
+             const showUS = countryCode === 'US';
+             const showCA = countryCode === 'CA';
+             const showGB = countryCode === 'GB';
+             usStateDiv.classList.toggle('hidden-smooth', !showUS); usStateDiv.classList.toggle('visible-smooth', showUS);
+             caProvinceDiv.classList.toggle('hidden-smooth', !showCA); caProvinceDiv.classList.toggle('visible-smooth', showCA);
+             ukRegionDiv.classList.toggle('hidden-smooth', !showGB); ukRegionDiv.classList.toggle('visible-smooth', showGB);
+
+             ukAllowanceNote.classList.toggle('hidden', !showGB);
+             caAllowanceNote.classList.toggle('hidden', !showCA);
+             frAllowanceNote.classList.toggle('hidden', countryCode !== 'FR');
+             usStateNote.classList.toggle('hidden', !showUS);
+             inNote.classList.toggle('hidden', countryCode !== 'IN'); // Show/hide India note
+
+             // Hide all specific result rows initially when country changes
+             ukTaxableIncomeRow.classList.add('hidden-smooth');
+             frTaxableIncomeRow.classList.add('hidden-smooth');
+             federalTaxRow.classList.add('hidden-smooth');
+             regionalTaxRow.classList.add('hidden-smooth');
+
+             if (countryCode === 'GB' || countryCode === 'FR') { incomeAfterDeductionsLabel.textContent = 'Income After Deductions:'; }
+             else { incomeAfterDeductionsLabel.textContent = 'Taxable Income:'; }
+
+             resultDiv.classList.remove('visible'); resultDiv.style.opacity = '0';
+             const selectedProvince = showCA ? caProvinceSelect.value : null;
+             incomeAfterDeductionsSpan.textContent = formatCurrency(0, countryCode, selectedProvince); taxAmountSpan.textContent = formatCurrency(0, countryCode, selectedProvince);
+             federalTaxAmountSpan.textContent = formatCurrency(0, countryCode, selectedProvince); regionalTaxAmountSpan.textContent = formatCurrency(0, countryCode, selectedProvince);
+             taxableIncomeUKSpan.textContent = formatCurrency(0, 'GB'); taxableIncomeFRSpan.textContent = formatCurrency(0, 'FR');
+
+             incomeInput.classList.remove('border-red-500');
+             deductionsInput.classList.remove('border-red-500');
+             incomeError.classList.add('hidden'); deductionsError.classList.add('hidden');
+             incomeError.textContent = ''; deductionsError.textContent = '';
+        }
+
+        // --- Event Listeners ---
+        countrySelect.addEventListener('change', (event) => { updateUIForCountry(event.target.value); resultDiv.classList.remove('visible'); resultDiv.style.opacity = '0'; });
+        usStateSelect.addEventListener('change', () => { resultDiv.classList.remove('visible'); resultDiv.style.opacity = '0'; });
+        caProvinceSelect.addEventListener('change', () => { updateUIForCountry('CA'); resultDiv.classList.remove('visible'); resultDiv.style.opacity = '0'; });
+        ukRegionSelect.addEventListener('change', () => { resultDiv.classList.remove('visible'); resultDiv.style.opacity = '0'; });
+
+        // Handle form submission
+        taxForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+            if (!validateInput(incomeInput, incomeError) || !validateInput(deductionsInput, deductionsError)) {
+                 resultDiv.classList.remove('visible'); resultDiv.style.opacity = '0'; return;
+            }
+
+            calculateButton.disabled = true;
+            calculateButton.textContent = 'Calculating...';
+
+            setTimeout(() => {
+                const income = parseFloat(incomeInput.value); const deductions = parseFloat(deductionsInput.value);
+                const selectedCountry = countrySelect.value; // Read from standard select
+                const countryConfig = taxData[selectedCountry];
+                let incomeAfterDeductions = Math.max(0, income - deductions); let taxableIncome = incomeAfterDeductions;
+                let nationalTax = 0; let regionalTax = 0; let totalTax = 0; let displayTaxableIncomeSpecific = null;
+                let displayCurrencyCode = selectedCountry;
+                let displayProvinceCode = null;
+
+                // Explicitly hide rows before calculation and display
+                ukTaxableIncomeRow.classList.add('hidden-smooth');
+                frTaxableIncomeRow.classList.add('hidden-smooth');
+                federalTaxRow.classList.add('hidden-smooth');
+                regionalTaxRow.classList.add('hidden-smooth');
+
+
+                if (countryConfig.calculate) { // PK, FR, RU, IN
+                     const result = countryConfig.calculate(taxableIncome);
+                     nationalTax = result.nationalTax; totalTax = nationalTax;
+                     if (result.taxableIncomeDisplay !== undefined) {
+                         displayTaxableIncomeSpecific = result.taxableIncomeDisplay;
+                         // Only show FR row if FR is selected AND value exists
+                         if(selectedCountry === 'FR' && displayTaxableIncomeSpecific >= 0) frTaxableIncomeRow.classList.remove('hidden-smooth');
+                     }
+                     // Show National tax row for these countries if tax >= 0
+                     if (nationalTax >= 0) federalTaxRow.classList.remove('hidden-smooth');
+                } else if (countryConfig.regions) { // UK
+                    const selectedRegion = ukRegionSelect.value; // Read from standard select
+                    const regionConfig = countryConfig.regions[selectedRegion];
+                    if (regionConfig?.calculate) {
+                        const result = regionConfig.calculate(taxableIncome); // Use taxableIncome here
+                        regionalTax = result.regionalTax; totalTax = regionalTax;
+                         if (result.taxableIncomeDisplay !== undefined) {
+                            displayTaxableIncomeSpecific = result.taxableIncomeDisplay;
+                            // Only show UK row if GB is selected AND value exists
+                            if (displayTaxableIncomeSpecific >= 0) ukTaxableIncomeRow.classList.remove('hidden-smooth');
+                        }
+                        regionalTaxLabel.textContent = `Regional Tax (${regionConfig.name}):`;
+                        // Only show regional row if regional tax was calculated
+                        if (regionalTax >= 0) regionalTaxRow.classList.remove('hidden-smooth'); // Show even if 0
+                    }
+                } else if (countryConfig.calculateNational) { // US, CA
+                     nationalTax = countryConfig.calculateNational(taxableIncome);
+                     // Show federal row if tax >= 0
+                     if (nationalTax >= 0) federalTaxRow.classList.remove('hidden-smooth'); // Show even if 0
+
+                     if (selectedCountry === 'US') {
+                         const selectedState = usStateSelect.value; // Read from standard select
+                         if (countryConfig.states?.[selectedState]?.calculate) {
+                              regionalTax = countryConfig.states[selectedState].calculate(taxableIncome);
+                              regionalTaxLabel.textContent = `State Tax (${selectedState}):`;
+                              // Only show regional row if regional tax >= 0
+                              if (regionalTax >= 0) regionalTaxRow.classList.remove('hidden-smooth');
+                         }
+                     } else if (selectedCountry === 'CA') {
+                         const selectedProvince = caProvinceSelect.value; // Read from standard select
+                         displayProvinceCode = selectedProvince;
+                          if (countryConfig.provinces?.[selectedProvince]?.calculate) {
+                              regionalTax = countryConfig.provinces[selectedProvince].calculate(taxableIncome);
+                              regionalTaxLabel.textContent = `Provincial Tax (${countryConfig.provinces[selectedProvince].name}):`;
+                               // Only show regional row if regional tax >= 0
+                              if (regionalTax >= 0) regionalTaxRow.classList.remove('hidden-smooth');
+                         }
+                     }
+                     totalTax = nationalTax + regionalTax;
+                }
+
+                // --- Display results ---
+                // Set the main income display value
+                incomeAfterDeductionsSpan.textContent = formatCurrency(taxableIncome, displayCurrencyCode, displayProvinceCode);
+
+                // Update and show specific taxable income rows ONLY if applicable
+                if (displayTaxableIncomeSpecific !== null) {
+                    // For UK/FR, the first line shows income *before* specific deductions
+                    incomeAfterDeductionsSpan.textContent = formatCurrency(incomeAfterDeductions, displayCurrencyCode, displayProvinceCode);
+                    // Visibility handled above based on selected country
+                    if (selectedCountry === 'GB') taxableIncomeUKSpan.textContent = formatCurrency(displayTaxableIncomeSpecific, displayCurrencyCode);
+                    else if (selectedCountry === 'FR') taxableIncomeFRSpan.textContent = formatCurrency(displayTaxableIncomeSpecific, displayCurrencyCode);
+                }
+
+                // Set national and regional tax amounts
+                federalTaxAmountSpan.textContent = formatCurrency(nationalTax, displayCurrencyCode, displayProvinceCode);
+                regionalTaxAmountSpan.textContent = formatCurrency(regionalTax, displayCurrencyCode, displayProvinceCode);
+                // Set total tax amount
+                taxAmountSpan.textContent = formatCurrency(totalTax, displayCurrencyCode, displayProvinceCode);
+
+                // Make result section visible
+                resultDiv.style.opacity = '1';
+                resultDiv.classList.add('visible');
+
+                 // Re-enable button
+                 calculateButton.disabled = false;
+                 calculateButton.textContent = 'Calculate Tax';
+
+            }, 50); // Small delay
+
+        });
+
+        // Real-time validation
+        incomeInput.addEventListener('input', () => validateInput(incomeInput, incomeError));
+        deductionsInput.addEventListener('input', () => validateInput(deductionsInput, deductionsError));
+
+        // Initial Setup
+        updateUIForCountry(countrySelect.value); // Use standard select value
+    </script>
+
+</body>
+</html>
